@@ -1,0 +1,965 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Control Panel - Westr42</title>
+    <link rel="shortcut icon" type="image/x-icon" href="favicon.ico" />
+    <style>
+        :root {
+            --primary: #2a2a72;
+            --secondary: #009ffd;
+            --text: #333;
+            --background: rgba(245, 245, 245, 0.1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background: #000;
+            min-height: 100vh;
+            color: white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .hidden-panel {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.95);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--secondary);
+            border-radius: 15px;
+            padding: 2rem;
+            width: 90%;
+            max-width: 800px;
+            z-index: 1000;
+            box-shadow: 0 0 20px rgba(0, 159, 253, 0.3);
+            animation: panelFadeIn 0.5s ease-out;
+        }
+
+        .panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--secondary);
+        }
+
+        .panel-title {
+            font-size: 1.5rem;
+            color: var(--secondary);
+            text-shadow: 0 0 10px rgba(0, 159, 253, 0.5);
+        }
+
+        .control-section {
+            margin-bottom: 2rem;
+            padding: 1rem;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+        }
+
+        .control-title {
+            font-size: 1.2rem;
+            margin-bottom: 1rem;
+            color: var(--secondary);
+        }
+
+        .control-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+        }
+
+        .control-item {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .slider-control {
+            -webkit-appearance: none;
+            width: 100%;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 3px;
+            outline: none;
+        }
+
+        .slider-control::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 16px;
+            height: 16px;
+            background: var(--secondary);
+            border-radius: 50%;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .slider-control::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+            box-shadow: 0 0 10px var(--secondary);
+        }
+
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 60px;
+            height: 34px;
+        }
+
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .toggle-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(255, 255, 255, 0.1);
+            transition: .4s;
+            border-radius: 34px;
+        }
+
+        .toggle-slider:before {
+            position: absolute;
+            content: "";
+            height: 26px;
+            width: 26px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+
+        input:checked + .toggle-slider {
+            background-color: var(--secondary);
+        }
+
+        input:checked + .toggle-slider:before {
+            transform: translateX(26px);
+        }
+
+        .color-picker {
+            -webkit-appearance: none;
+            padding: 0;
+            border: none;
+            border-radius: 10px;
+            width: 100%;
+            height: 40px;
+            cursor: pointer;
+        }
+
+        .color-picker::-webkit-color-swatch {
+            border: none;
+            border-radius: 10px;
+            padding: 0;
+        }
+
+        .color-picker::-webkit-color-swatch-wrapper {
+            border: none;
+            border-radius: 10px;
+            padding: 0;
+        }
+
+        @keyframes panelFadeIn {
+            from {
+                opacity: 0;
+                transform: translate(-50%, -60%);
+            }
+            to {
+                opacity: 1;
+                transform: translate(-50%, -50%);
+            }
+        }
+
+        .close-panel {
+            background: none;
+            border: none;
+            color: var(--secondary);
+            font-size: 1.5rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .close-panel:hover {
+            color: white;
+            transform: rotate(90deg);
+        }
+
+        .button-control {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid var(--secondary);
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .button-control:hover {
+            background: var(--secondary);
+            transform: translateY(-2px);
+        }
+
+        .changes-list {
+            max-height: 200px;
+            overflow-y: auto;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            padding: 10px;
+        }
+
+        .change-entry {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            margin-bottom: 5px;
+        }
+
+        .change-entry:last-child {
+            border-bottom: none;
+        }
+
+        .change-entry button {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid var(--secondary);
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .change-entry button:hover {
+            background: var(--secondary);
+        }
+
+        .save-button {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: var(--secondary);
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            z-index: 1001;
+        }
+
+        .save-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 2px 10px rgba(0, 159, 253, 0.3);
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+        }
+
+        .history-button {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid var(--secondary);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.9rem;
+        }
+
+        .history-button:hover {
+            background: var(--secondary);
+            transform: translateY(-2px);
+        }
+
+        .history-modal {
+            z-index: 1001;
+        }
+
+        .history-modal .changes-list {
+            max-height: 70vh;
+            overflow-y: auto;
+            margin: 20px 0;
+        }
+
+        .change-entry {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            margin-bottom: 5px;
+        }
+
+        .change-entry:last-child {
+            border-bottom: none;
+        }
+
+        .change-entry button {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid var(--secondary);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .change-entry button:hover {
+            background: var(--secondary);
+        }
+
+        .secret-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(5px);
+            z-index: 2000;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .secret-modal.active {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            opacity: 1;
+        }
+
+        .secret-content {
+            background: rgba(0, 0, 0, 0.95);
+            border: 1px solid var(--secondary);
+            border-radius: 15px;
+            padding: 2rem;
+            width: 300px;
+            transform: translateY(-20px);
+            transition: transform 0.3s ease;
+            box-shadow: 0 0 20px rgba(0, 159, 253, 0.3);
+        }
+
+        .secret-modal.active .secret-content {
+            transform: translateY(0);
+        }
+
+        .secret-content h3 {
+            color: var(--secondary);
+            margin: 0 0 1.5rem 0;
+            text-align: center;
+            font-size: 1.5rem;
+            text-shadow: 0 0 10px rgba(0, 159, 253, 0.5);
+        }
+
+        .secret-content input {
+            width: 100%;
+            padding: 0.8rem;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid var(--secondary);
+            border-radius: 8px;
+            color: white;
+            font-size: 1rem;
+            outline: none;
+            transition: all 0.3s ease;
+        }
+
+        .secret-content input:focus {
+            background: rgba(255, 255, 255, 0.15);
+            box-shadow: 0 0 15px rgba(0, 159, 253, 0.3);
+        }
+
+        .secret-content input::placeholder {
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+
+        .secret-content.error {
+            animation: shake 0.2s ease-in-out;
+        }
+    </style>
+</head>
+<body>
+    <div id="controlPanel" class="hidden-panel">
+        <div class="panel-header">
+            <div class="header-left">
+                <button class="history-button" onclick="openHistoryModal()">History</button>
+            </div>
+            <h2 class="panel-title">Website Control Panel</h2>
+            <button class="close-panel" onclick="closePanel()">×</button>
+        </div>
+
+        <div class="control-section">
+            <h3 class="control-title">Visual Effects</h3>
+            <div class="control-grid">
+                <div class="control-item">
+                    <label>Mouse Trail Intensity</label>
+                    <input type="range" class="slider-control" min="0" max="100" value="50" 
+                           oninput="updateMouseTrail(this.value)">
+                </div>
+                <div class="control-item">
+                    <label>Background Blur</label>
+                    <input type="range" class="slider-control" min="0" max="20" value="5" 
+                           oninput="updateBackgroundBlur(this.value)">
+                </div>
+                <div class="control-item">
+                    <label>Enable Matrix Effect</label>
+                    <label class="toggle-switch">
+                        <input type="checkbox" onchange="toggleMatrixEffect(this.checked)">
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+            </div>
+        </div>
+
+        <div class="control-section">
+            <h3 class="control-title">Color Scheme</h3>
+            <div class="control-grid">
+                <div class="control-item">
+                    <label>Primary Color</label>
+                    <input type="color" class="color-picker" value="#2a2a72" 
+                           oninput="updatePrimaryColor(this.value)">
+                </div>
+                <div class="control-item">
+                    <label>Secondary Color</label>
+                    <input type="color" class="color-picker" value="#009ffd" 
+                           oninput="updateSecondaryColor(this.value)">
+                </div>
+            </div>
+        </div>
+
+        <div class="control-section">
+            <h3 class="control-title">Animation Controls</h3>
+            <div class="control-grid">
+                <div class="control-item">
+                    <label>Animation Speed</label>
+                    <input type="range" class="slider-control" min="0.1" max="2" step="0.1" value="1" 
+                           oninput="updateAnimationSpeed(this.value)">
+                </div>
+                <div class="control-item">
+                    <label>Hover Effects</label>
+                    <label class="toggle-switch">
+                        <input type="checkbox" checked onchange="toggleHoverEffects(this.checked)">
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+            </div>
+        </div>
+
+        <div class="control-section">
+            <h3 class="control-title">Fun Effects</h3>
+            <div class="control-grid">
+                <div class="control-item">
+                    <button class="button-control" onclick="triggerConfetti()">Trigger Confetti</button>
+                </div>
+                <div class="control-item">
+                    <button class="button-control" onclick="triggerRippleEffect()">Ripple Effect</button>
+                </div>
+            </div>
+        </div>
+
+        <button id="saveChanges" class="save-button">Save Changes</button>
+    </div>
+
+    <div id="historyModal" class="history-modal hidden-panel">
+        <div class="panel-header">
+            <h2 class="panel-title">Changes History</h2>
+            <button class="close-panel" onclick="closeHistoryModal()">×</button>
+        </div>
+        <div id="changesHistory" class="changes-list"></div>
+    </div>
+
+    <div id="secretModal" class="secret-modal">
+        <div class="secret-content">
+            <h3>Secret</h3>
+            <input type="password" id="secretInput" placeholder="Enter code..." autocomplete="off">
+        </div>
+    </div>
+
+    <script>
+        // Console command to open panel
+        const _0x4f8d=['\x6C\x6F\x67','\x70\x61\x6E\x65\x6C\x2E\x6F\x70\x65\x6E\x2E\x72\x6F\x6F\x74','\x73\x74\x79\x6C\x65','\x67\x65\x74\x45\x6C\x65\x6D\x65\x6E\x74\x42\x79\x49\x64','\x63\x6F\x6E\x74\x72\x6F\x6C\x50\x61\x6E\x65\x6C','\x64\x69\x73\x70\x6C\x61\x79','\x62\x6C\x6F\x63\x6B','\x61\x70\x70\x6C\x79'];(function(_0x38e1x1,_0x38e1x2){const _0x38e1x3=function(_0x38e1x4){while(--_0x38e1x4){_0x38e1x1['push'](_0x38e1x1['shift']())}};_0x38e1x3(++_0x38e1x2)}(_0x4f8d,0x1f4));const _0x56c8=function(_0x38e1x1,_0x38e1x2){_0x38e1x1=_0x38e1x1-0x0;let _0x38e1x3=_0x4f8d[_0x38e1x1];return _0x38e1x3};const originalLog=console[_0x56c8('0x0')];console[_0x56c8('0x0')]=function(){const _0x38e1x7=Array['from'](arguments);if(_0x38e1x7[0x0]===_0x56c8('0x1')){document[_0x56c8('0x3')](_0x56c8('0x4'))[_0x56c8('0x2')][_0x56c8('0x5')]=_0x56c8('0x6')}originalLog[_0x56c8('0x7')](console,_0x38e1x7)};
+
+        // Add new secret code functionality
+        // Create secret box if it doesn't exist
+        if (!document.getElementById('secretBox')) {
+            let secretBox = document.createElement('div');
+            secretBox.style.display = 'none';
+            secretBox.style.position = 'fixed';
+            secretBox.style.top = '10px';
+            secretBox.style.right = '10px';
+            secretBox.style.padding = '10px';
+            secretBox.style.background = 'rgba(0, 0, 0, 0.8)';
+            secretBox.style.border = '1px solid var(--secondary)';
+            secretBox.style.borderRadius = '5px';
+            secretBox.style.color = 'var(--secondary)';
+            secretBox.style.zIndex = '10000';
+            secretBox.style.fontFamily = 'monospace';
+            secretBox.id = 'secretBox';
+            document.body.appendChild(secretBox);
+        }
+
+        // Function to show secret
+        function showSecret() {
+            const secretBox = document.getElementById('secretBox');
+            secretBox.textContent = 'Console Password: panel.open.root';
+            secretBox.style.display = 'block';
+            setTimeout(() => {
+                secretBox.style.display = 'none';
+            }, 5000);
+        }
+
+        // Function to open panel
+        function openPanel() {
+            document.getElementById('controlPanel').style.display = 'block';
+            showSecret();
+        }
+
+        // Add global function for console access
+        window.root6713 = function() {
+            openPanel();
+        };
+
+        // Keyboard listener for typing the code
+        let consoleInput = '';
+        let lastKeyTime = Date.now();
+        const RESET_TIME = 1000;
+
+        document.addEventListener('keydown', (e) => {
+            const currentTime = Date.now();
+            if (currentTime - lastKeyTime > RESET_TIME) {
+                consoleInput = '';
+            }
+            lastKeyTime = currentTime;
+            
+            consoleInput += e.key;
+            if (consoleInput.includes('root6713')) {
+                openPanel();
+                consoleInput = '';
+            }
+        });
+
+        // Control panel functions
+        let siteChanges = [];
+        const LOCAL_STORAGE_KEY = 'siteSettings';
+
+        // Load saved settings on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            loadSavedSettings();
+            renderChangesHistory();
+        });
+
+        function addChange(change) {
+            const timestamp = new Date().toLocaleString();
+            siteChanges.push({
+                id: Date.now(),
+                timestamp,
+                ...change
+            });
+            renderChangesHistory();
+            saveSettings(); // Make sure this is called to save to localStorage
+        }
+
+        function renderChangesHistory() {
+            const historyContainer = document.getElementById('changesHistory');
+            historyContainer.innerHTML = '';
+
+            if (siteChanges.length === 0) {
+                historyContainer.innerHTML = '<div class="change-entry">No changes recorded yet</div>';
+                return;
+            }
+
+            siteChanges.forEach(change => {
+                const entry = document.createElement('div');
+                entry.className = 'change-entry';
+                entry.innerHTML = `
+                    <span>${change.timestamp}: ${change.description}</span>
+                    <button onclick="revertChange(${change.id})">${change.active ? 'Revert' : 'Restore'}</button>
+                `;
+                historyContainer.appendChild(entry);
+            });
+        }
+
+        function revertChange(changeId) {
+            const change = siteChanges.find(c => c.id === changeId);
+            if (change) {
+                change.active = !change.active;
+                applyChange(change);
+                renderChangesHistory();
+                saveSettings();
+            }
+        }
+
+        function applyChange(change) {
+            switch (change.type) {
+                case 'mouseTrail':
+                    updateMouseTrail(change.active ? change.value : 0);
+                    break;
+                case 'backgroundBlur':
+                    updateBackgroundBlur(change.active ? change.value : 0);
+                    break;
+                case 'matrixEffect':
+                    toggleMatrixEffect(change.active ? change.value : false);
+                    break;
+                case 'primaryColor':
+                    updatePrimaryColor(change.active ? change.value : '#2a2a72');
+                    break;
+                case 'secondaryColor':
+                    updateSecondaryColor(change.active ? change.value : '#009ffd');
+                    break;
+                case 'animationSpeed':
+                    updateAnimationSpeed(change.active ? change.value : 1);
+                    break;
+                case 'hoverEffects':
+                    toggleHoverEffects(change.active ? change.value : true);
+                    break;
+            }
+        }
+
+        function updateMouseTrail(value) {
+            document.documentElement.style.setProperty('--mouse-trail-intensity', value + '%');
+            addChange({
+                type: 'mouseTrail',
+                description: `Mouse Trail Intensity: ${value}%`,
+                value: value,
+                active: true
+            });
+        }
+
+        function updateBackgroundBlur(value) {
+            document.documentElement.style.setProperty('--background-blur', value + 'px');
+            addChange({
+                type: 'backgroundBlur',
+                description: `Background Blur: ${value}px`,
+                value: value,
+                active: true
+            });
+        }
+
+        function toggleMatrixEffect(enabled) {
+            if (enabled) {
+                startMatrixEffect();
+            } else {
+                stopMatrixEffect();
+            }
+            addChange({
+                type: 'matrixEffect',
+                description: `Matrix Effect: ${enabled ? 'Enabled' : 'Disabled'}`,
+                value: enabled,
+                active: true
+            });
+        }
+
+        function updatePrimaryColor(color) {
+            document.documentElement.style.setProperty('--primary', color);
+            addChange({
+                type: 'primaryColor',
+                description: `Primary Color: ${color}`,
+                value: color,
+                active: true
+            });
+        }
+
+        function updateSecondaryColor(color) {
+            document.documentElement.style.setProperty('--secondary', color);
+            addChange({
+                type: 'secondaryColor',
+                description: `Secondary Color: ${color}`,
+                value: color,
+                active: true
+            });
+        }
+
+        function updateAnimationSpeed(speed) {
+            document.documentElement.style.setProperty('--animation-speed', speed);
+            addChange({
+                type: 'animationSpeed',
+                description: `Animation Speed: ${speed}x`,
+                value: speed,
+                active: true
+            });
+        }
+
+        function toggleHoverEffects(enabled) {
+            document.body.classList.toggle('hover-effects-disabled', !enabled);
+            addChange({
+                type: 'hoverEffects',
+                description: `Hover Effects: ${enabled ? 'Enabled' : 'Disabled'}`,
+                value: enabled,
+                active: true
+            });
+        }
+
+        function triggerConfetti() {
+            // Add confetti effect
+            createConfettiEffect();
+        }
+
+        function triggerRippleEffect() {
+            // Add ripple effect
+            createRippleEffect();
+        }
+
+        // Effect implementations
+        function createConfettiEffect() {
+            const colors = ['#ff0000', '#00ff00', '#0000ff', '#ffff00', '#ff00ff', '#00ffff'];
+            for (let i = 0; i < 100; i++) {
+                const confetti = document.createElement('div');
+                confetti.style.position = 'fixed';
+                confetti.style.width = '10px';
+                confetti.style.height = '10px';
+                confetti.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+                confetti.style.left = Math.random() * 100 + 'vw';
+                confetti.style.top = '-10px';
+                confetti.style.borderRadius = '50%';
+                
+                // Add horizontal movement
+                const horizontalSpeed = (Math.random() - 0.5) * 15; // Random value between -7.5 and 7.5
+                const fallSpeed = 3 + Math.random() * 2; // Random fall speed between 3 and 5 seconds
+                
+                confetti.style.animation = `confettiFall ${fallSpeed}s linear forwards`;
+                
+                // Add keyframes dynamically for this specific confetti
+                const keyframes = `
+                    @keyframes confettiFall {
+                        to {
+                            transform: translateX(${horizontalSpeed}vw) translateY(100vh) rotate(720deg);
+                        }
+                    }
+                `;
+                
+                const style = document.createElement('style');
+                style.textContent = keyframes;
+                document.head.appendChild(style);
+                
+                document.body.appendChild(confetti);
+                setTimeout(() => {
+                    confetti.remove();
+                    style.remove();
+                }, fallSpeed * 1000);
+            }
+        }
+
+        function createRippleEffect() {
+            const ripple = document.createElement('div');
+            ripple.style.position = 'fixed';
+            ripple.style.top = '50%';
+            ripple.style.left = '50%';
+            ripple.style.transform = 'translate(-50%, -50%)';
+            ripple.style.border = '2px solid var(--secondary)';
+            ripple.style.borderRadius = '50%';
+            ripple.style.animation = 'ripple 1s linear forwards';
+            document.body.appendChild(ripple);
+            setTimeout(() => ripple.remove(), 1000);
+        }
+
+        // Add necessary animations to the stylesheet
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes fall {
+                to {
+                    transform: translateY(100vh) rotate(720deg);
+                }
+            }
+
+            @keyframes ripple {
+                0% {
+                    width: 0;
+                    height: 0;
+                    opacity: 1;
+                }
+                100% {
+                    width: 200vw;
+                    height: 200vw;
+                    opacity: 0;
+                }
+            }
+        `;
+        document.head.appendChild(style);
+
+        // Save and load functions
+        function saveSettings() {
+            localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify({
+                changes: siteChanges
+            }));
+        }
+
+        function loadSavedSettings() {
+            const saved = localStorage.getItem(LOCAL_STORAGE_KEY);
+            if (saved) {
+                const settings = JSON.parse(saved);
+                siteChanges = settings.changes || [];
+                siteChanges.forEach(change => {
+                    if (change.active) {
+                        applyChange(change);
+                    }
+                });
+            }
+        }
+
+        // Add save button functionality
+        document.getElementById('saveChanges').addEventListener('click', () => {
+            saveSettings();
+            alert('Changes saved successfully!');
+        });
+
+        function openHistoryModal() {
+            const historyModal = document.getElementById('historyModal');
+            historyModal.style.display = 'block';
+            renderChangesHistory();
+        }
+
+        function closeHistoryModal() {
+            const historyModal = document.getElementById('historyModal');
+            historyModal.style.display = 'none';
+        }
+
+        // Close history modal when clicking outside
+        document.addEventListener('click', (e) => {
+            const historyModal = document.getElementById('historyModal');
+            if (e.target === historyModal) {
+                closeHistoryModal();
+            }
+        });
+
+        // Add these functions to your existing script section
+        function startMatrixEffect() {
+            // Add matrix effect implementation if not already present
+            if (!window.matrixEffectInitialized) {
+                const canvas = document.createElement('canvas');
+                canvas.id = 'matrixCanvas';
+                canvas.style.position = 'fixed';
+                canvas.style.top = '0';
+                canvas.style.left = '0';
+                canvas.style.width = '100%';
+                canvas.style.height = '100%';
+                canvas.style.zIndex = '-1'; // Place behind the control panel
+                canvas.style.opacity = '0.8';
+                document.body.prepend(canvas);
+
+                // Matrix effect implementation
+                const ctx = canvas.getContext('2d');
+                let width = canvas.width = window.innerWidth;
+                let height = canvas.height = window.innerHeight;
+
+                const columns = Math.floor(width / 20);
+                const drops = new Array(columns).fill(0);
+
+                function draw() {
+                    ctx.fillStyle = 'rgba(0, 0, 0, 0.05)';
+                    ctx.fillRect(0, 0, width, height);
+
+                    ctx.fillStyle = '#0F0';
+                    ctx.font = '15px monospace';
+
+                    for (let i = 0; i < drops.length; i++) {
+                        const text = String.fromCharCode(0x30A0 + Math.random() * 33);
+                        ctx.fillText(text, i * 20, drops[i] * 20);
+
+                        if (drops[i] * 20 > height && Math.random() > 0.975) {
+                            drops[i] = 0;
+                        }
+                        drops[i]++;
+                    }
+                }
+
+                window.matrixEffectInterval = setInterval(draw, 33);
+                window.matrixEffectInitialized = true;
+
+                // Handle window resize
+                window.addEventListener('resize', () => {
+                    width = canvas.width = window.innerWidth;
+                    height = canvas.height = window.innerHeight;
+                });
+            }
+        }
+
+        function stopMatrixEffect() {
+            const canvas = document.getElementById('matrixCanvas');
+            if (canvas) {
+                canvas.remove();
+            }
+            if (window.matrixEffectInterval) {
+                clearInterval(window.matrixEffectInterval);
+            }
+            window.matrixEffectInitialized = false;
+        }
+
+        // Update the existing toggleMatrixEffect function to use these
+        function toggleMatrixEffect(enabled) {
+            if (enabled) {
+                startMatrixEffect();
+            } else {
+                stopMatrixEffect();
+            }
+        }
+
+        // Function to show the secret modal
+        function showSecretModal() {
+            secretModal.classList.add('active');
+            secretInput.focus();
+        }
+
+        // Function to hide the secret modal
+        function hideSecretModal() {
+            secretModal.classList.remove('active');
+            secretInput.value = '';
+        }
+
+        // Handle input validation
+        secretInput.addEventListener('input', (e) => {
+            if (e.target.value === 'root6713') {
+                hideSecretModal();
+                document.getElementById('controlPanel').style.display = 'block';
+            }
+        });
+
+        // Show modal on specific key combination (optional)
+        document.addEventListener('keydown', (e) => {
+            if (e.ctrlKey && e.shiftKey && e.key === 'K') {
+                showSecretModal();
+                e.preventDefault();
+            }
+        });
+
+        // Close modal when clicking outside
+        secretModal.addEventListener('click', (e) => {
+            if (e.target === secretModal) {
+                hideSecretModal();
+            }
+        });
+
+        // Show modal on page load (optional - remove if you don't want this)
+        document.addEventListener('DOMContentLoaded', () => {
+            showSecretModal();
+        });
+    </script>
+</body>
+</html>
