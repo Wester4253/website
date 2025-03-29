@@ -1,0 +1,1747 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Westr42</title>
+    <link rel="shortcut icon" type="image/x-icon" href="favicon.ico" />
+    <meta name="referrer" content="origin">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self' https: blob: data: 'unsafe-inline' 'unsafe-eval'; connect-src 'self' https: blob: data:; frame-src 'self' https://www.youtube.com https://youtube.com https://www.youtube-nocookie.com;">
+    <style>
+        :root {
+            --primary: #2a2a72;
+            --secondary: #009ffd;
+            --text: #333;
+            --background: rgba(245, 245, 245, 0.1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        /* Add new music player styles */
+        .stats-container {
+            position: fixed;
+            bottom: 80px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            padding: 15px;
+            width: 300px;
+            opacity: 0;
+            transform: translateY(20px);
+            pointer-events: none;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .stats-container.visible {
+            opacity: 1;
+            transform: translateY(0);
+            pointer-events: all;
+        }
+
+        .youtube-input-container {
+            position: fixed; /* Changed from absolute to fixed */
+            right: 300px;
+            bottom: 20px; /* Align with music controls */
+            transform: none; /* Remove transform */
+            display: none;
+            align-items: center;
+            gap: 5px;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(10px);
+            padding: 8px;
+            border-radius: 8px;
+            z-index: 1001;
+        }
+
+        .youtube-input-container.visible {
+            display: flex;
+        }
+
+        .video-background {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            object-fit: cover;
+            filter: brightness(0.6);
+        }
+
+        body {
+            background: transparent;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 2rem;
+            color: white;
+            position: relative;
+        }
+
+        .container {
+            max-width: 1200px;
+            width: 100%;
+            text-align: center;
+            backdrop-filter: blur(5px);
+            padding: 2rem;
+            border-radius: 20px;
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        header {
+            margin-bottom: 4rem;
+            opacity: 0;
+            transform: translateY(-20px);
+            animation: fadeInDown 1s forwards;
+        }
+
+        h1 {
+            color: white;
+            font-size: clamp(2rem, 5vw, 3.5rem);
+            margin-bottom: 1rem;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .subtitle {
+            color: rgba(255, 255, 255, 0.9);
+            font-size: clamp(1rem, 2vw, 1.2rem);
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
+        }
+
+        .nav-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            max-width: 800px;
+            margin: 0 auto;
+            gap: 2rem;
+            padding: 1rem;
+        }
+
+        .nav-button {
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            padding: 2rem;
+            border-radius: 15px;
+            cursor: pointer;
+            text-decoration: none;
+            color: white;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            opacity: 0;
+            transform: translateY(20px);
+            backdrop-filter: blur(5px);
+        }
+
+        .nav-button:nth-child(1) { animation: fadeInUp 0.5s 0.2s forwards; }
+        .nav-button:nth-child(2) { animation: fadeInUp 0.5s 0.4s forwards; }
+        .nav-button:nth-child(3) { animation: fadeInUp 0.5s 0.6s forwards; }
+        .nav-button:nth-child(4) { animation: fadeInUp 0.5s 0.8s forwards; }
+
+        .nav-button::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(45deg, var(--primary), var(--secondary));
+            opacity: 0;
+            transition: opacity 0.4s;
+            z-index: 1;
+        }
+
+        .nav-button::after {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(45deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+            transform: rotate(45deg);
+            transition: 0.6s;
+            opacity: 0;
+        }
+
+        .nav-button:hover {
+            transform: translateY(-5px) scale(1.03);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+        }
+
+        .nav-button:hover::before {
+            opacity: 0.2;
+        }
+
+        .nav-button:hover::after {
+            opacity: 1;
+            transform: rotate(45deg) translateX(100%);
+        }
+
+        .button-content {
+            position: relative;
+            z-index: 2;
+            transition: transform 0.3s;
+        }
+
+        .nav-button:hover .button-content {
+            transform: scale(1.05);
+        }
+
+        .icon {
+            font-size: 2rem;
+            margin-bottom: 1rem;
+            display: block;
+            transition: transform 0.3s;
+        }
+
+        .nav-button:hover .icon {
+            transform: scale(1.2) rotate(5deg);
+        }
+
+        .button-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            transition: color 0.3s;
+        }
+
+        .button-description {
+            font-size: 0.9rem;
+            opacity: 0.9;
+            transition: opacity 0.3s;
+        }
+
+        @keyframes fadeInDown {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fadeInUp {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @media (max-width: 768px) {
+            body {
+                padding: 1rem;
+            }
+
+            .nav-grid {
+                gap: 1rem;
+            }
+
+            .nav-button {
+                padding: 1.5rem;
+            }
+        }
+
+        .music-controls {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 1002;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .music-toggle.hidden {
+            display: none;
+        }
+
+        .youtube-input-container {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            display: none;
+            align-items: center;
+            gap: 5px;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(10px);
+            padding: 8px;
+            border-radius: 8px;
+            z-index: 1001;
+        }
+
+        .youtube-input-container.visible {
+            display: flex;
+        }
+
+        .youtube-input {
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            padding: 8px 12px;
+            border-radius: 5px;
+            color: white;
+            width: 250px;
+        }
+
+        .youtube-submit {
+            width: 32px;
+            height: 32px;
+            font-size: 16px;
+        }
+
+        /* Ensure specific button order */
+        .audio-controls-toggle {
+            order: 1;
+        }
+
+        .music-toggle {
+            order: 2;
+        }
+
+        .music-toggle {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: rgba(0, 0, 0, 0.8);
+            border: none;
+            color: white;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(5px);
+            margin-left: 10px; /* Space between input container and toggle */
+        }
+
+        /* Hover effects */
+        .youtube-submit:hover,
+        .music-toggle:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .play-pause-btn {
+            margin-left: auto; /* Push to the right */
+        }
+
+        /* Make sure both buttons look identical */
+        .music-toggle, .play-pause-btn {
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(5px);
+        }
+
+        .youtube-submit, .music-toggle {
+            background: rgba(0, 0, 0, 0.8);
+            border: none;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            color: white;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(5px);
+        }
+
+        .music-toggle {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 1002;
+        }
+
+        .youtube-submit:hover, .music-toggle:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .player-container {
+            position: fixed;
+            bottom: 80px;
+            right: 20px;
+            width: 1px;
+            height: 1px;
+            opacity: 0;
+        }
+
+        .stats-container {
+            position: fixed;
+            bottom: 80px; /* Move it higher up */
+            right: 20px;
+            z-index: 1000;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 20px;
+            border-radius: 10px;
+            display: none; /* Hide by default */
+        }
+
+        .stats-container.visible {
+            display: block; /* Show when visible class is added */
+        }
+
+        .song-info {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .media-row {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .text-container {
+            flex: 1;
+            min-width: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: center; /* Center text vertically */
+            height: 60px; /* Match thumbnail height */
+        }
+
+        .song-thumbnail {
+            width: 100px;
+            height: 60px;
+            object-fit: cover;
+            border-radius: 4px;
+        }
+
+        .song-title {
+            font-weight: bold;
+            font-size: 1.1em;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            margin-bottom: 8px; /* Specific spacing between title and artist */
+        }
+
+        .song-artist {
+            font-size: 0.9em;
+            opacity: 0.8;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .control-button {
+            background: rgba(0, 0, 0, 0.8);
+            border: none;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: transform 0.3s ease, background-color 0.3s ease;
+            color: white;
+            font-size: 20px;
+            backdrop-filter: blur(5px);
+        }
+
+        .control-button:hover {
+            transform: scale(1.1);
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .play-icon, .pause-icon {
+            width: 24px;
+            height: 24px;
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center;
+        }
+
+        .play-icon {
+            background-image: url('https://cdn-icons-png.freepik.com/512/14034/14034663.png'); /* Swapped */
+        }
+
+        .pause-icon {
+            background-image: url('https://cdn-icons-png.freepik.com/512/14034/14034650.png'); /* Swapped */
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 3px;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--primary), var(--secondary));
+            border-radius: 3px;
+            position: absolute;
+            top: 0;
+            left: 0;
+            transition: width 0.1s linear;
+        }
+
+        .time-info {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.8em;
+            opacity: 0.8;
+        }
+
+        .close-player {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: none;
+            border: none;
+            color: white;
+            font-size: 20px;
+            cursor: pointer;
+            opacity: 0.7;
+            transition: opacity 0.3s ease;
+        }
+
+        .close-player:hover {
+            opacity: 1;
+        }
+
+        .music-toggle {
+            background: rgba(0, 0, 0, 0.8);
+            border: none;
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            backdrop-filter: blur(5px);
+        }
+
+        .music-toggle:hover {
+            transform: scale(1.1);
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .social-button {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 15px 30px;
+            border-radius: 8px;
+            border: none;
+            color: white;
+            cursor: pointer;
+            margin: 10px;
+            font-size: 16px;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(5px);
+        }
+
+        .social-button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+
+        .twitch-button {
+            background: linear-gradient(45deg, #6441a5, #8a67cc);
+        }
+
+        .youtube-button {
+            background: linear-gradient(45deg, #ff0000, #ff4444);
+        }
+
+        .kofi-button {
+            background: linear-gradient(45deg, #29abe0, #40c3ff);
+        }
+
+        .social-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 2rem;
+            animation: fadeInUp 0.5s 1s forwards;
+            opacity: 0;
+        }
+
+        .button-icon {
+            margin-right: 10px;
+            font-size: 1.2em;
+        }
+
+        .content-section {
+            display: none;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(10px);
+            padding: 2rem;
+            border-radius: 15px;
+            margin: 2rem auto;
+            max-width: 800px;
+            animation: fadeIn 0.3s ease-in-out;
+        }
+
+        .content-section.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .youtube-input-container {
+            display: none;
+            position: absolute;
+            bottom: 100%;
+            right: 0;
+            margin-bottom: 10px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 10px;
+            border-radius: 10px;
+            transition: all 0.3s ease;
+        }
+
+        .youtube-input-container.visible {
+            display: flex;
+        }
+
+        .back-button {
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-bottom: 1rem;
+            backdrop-filter: blur(5px);
+        }
+
+        .back-button:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        #content-sections {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            backdrop-filter: blur(10px);
+            display: none;
+            z-index: 1000;
+        }
+
+        #content-sections.active {
+            display: block;
+        }
+
+        .content-section {
+            display: none;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 90%;
+            max-width: 800px;
+            padding: 2rem;
+            background: rgba(0, 0, 0, 0.8);
+            border-radius: 15px;
+            color: white;
+        }
+
+        .content-section.active {
+            display: block;
+            animation: fadeIn 0.3s ease-in-out;
+        }
+
+        .embed-container {
+            position: relative;
+            padding-bottom: 56.25%; /* 16:9 aspect ratio */
+            height: 0;
+            overflow: hidden;
+            max-width: 100%;
+        }
+
+        .embed-container iframe {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translate(-50%, -48%); }
+            to { opacity: 1; transform: translate(-50%, -50%); }
+        }
+
+        /* Ensure main content has proper z-index */
+        #main-content {
+            position: relative;
+            z-index: 1;
+        }
+
+        .audio-controls-panel {
+            position: fixed;
+            bottom: 400px;
+            right: 20px;
+            width: 300px;
+            background: rgba(0, 0, 0, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 20px;
+            border-radius: 15px;
+            display: none;
+            z-index: 1003;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+            color: white;
+        }
+
+        .audio-controls-panel.visible {
+            display: block;
+        }
+
+        .panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .panel-header h3 {
+            margin: 0;
+        }
+
+        .close-panel {
+            background: none;
+            border: none;
+            color: white;
+            cursor: pointer;
+            font-size: 20px;
+        }
+
+        .slider-container {
+            position: relative;
+            padding-right: 45px; /* Increased space for the percentage text */
+            margin-bottom: 15px;
+            width: 100%;
+        }
+
+        .audio-slider {
+            width: 100%;
+            -webkit-appearance: none;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 2px;
+            outline: none;
+        }
+
+        .slider-value {
+            position: absolute;
+            right: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 12px;
+            width: 40px;
+            text-align: right;
+            margin-top: 8px; /* Align with the slider */
+        }
+
+        .audio-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 16px;
+            height: 16px;
+            background: #fff;
+            border-radius: 50%;
+            cursor: pointer;
+        }
+
+        .audio-slider::-moz-range-thumb {
+            width: 16px;
+            height: 16px;
+            background: #fff;
+            border-radius: 50%;
+            cursor: pointer;
+            border: none;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="mouseTrail"></canvas>
+    <style>
+        #mouseTrail {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 0;
+        }
+    </style>
+    <video autoplay muted loop class="video-background">
+        <source src="./content/home-bg.mp4" type="video/mp4">
+        
+        <!-- Fallback gradient if video fails to load -->
+        <style>
+            .video-background-fallback {
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: linear-gradient(45deg, #1a1a1a, #2a2a72);
+                z-index: -1;
+            }
+        </style>
+        <div class="video-background-fallback"></div>
+    </video>
+
+    <div class="container">
+        <header>
+            <h1>Welcome to My Website</h1>
+            <p class="subtitle">Explore and connect with me</p>
+        </header>
+
+        <!-- Main content area -->
+        <div id="main-content">
+            <!-- Social buttons section -->
+            <div class="social-buttons">
+                <a href="https://www.twitch.tv/westerneagle42" target="_blank" rel="noopener noreferrer" class="social-button twitch-button">
+                    <span class="button-icon">📺</span>Watch on Twitch
+                </a>
+                <a href="https://www.youtube.com/@Westr42" target="_blank" rel="noopener noreferrer" class="social-button youtube-button">
+                    <span class="button-icon">🎥</span>YouTube Channel
+                </a>
+                <a href="https://ko-fi.com/Y8Y41C0PS1" target="_blank" rel="noopener noreferrer" class="social-button kofi-button">
+                    <span class="button-icon">☕</span>Support on Ko-fi
+                </a>
+            </div>
+
+            <!-- Main navigation grid -->
+            <div class="nav-grid">
+                <button data-content="about" class="nav-button">
+                    <div class="button-content">
+                        <span class="icon">👤</span>
+                        <h2 class="button-title">About</h2>
+                        <p class="button-description">Learn more about who I am</p>
+                    </div>
+                </button>
+
+                <button data-content="contact" class="nav-button">
+                    <div class="button-content">
+                        <span class="icon">📧</span>
+                        <h2 class="button-title">Contact</h2>
+                        <p class="button-description">Get in touch with me</p>
+                    </div>
+                </button>
+            </div>
+        </div>
+
+        <!-- Content sections -->
+        <div id="content-sections">
+            <div id="about-content" class="content-section">
+                <button class="back-button">← Back</button>
+                <h2>About Me</h2>
+                <p>I am a small streamer from Canada, and I code as well. I am currently working on a VR game called Shmackem Whackem.</p>
+            </div>
+
+            <div id="contact-content" class="content-section">
+                <button class="back-button">← Back</button>
+                <h2>Contact Me</h2>
+                <div class="contact-info">
+                    <p><strong>Discord:</strong> westerneagle42</p>
+                </div>
+                <style>
+                    .contact-info {
+                        background: rgba(255, 255, 255, 0.1);
+                        padding: 1.5rem;
+                        border-radius: 10px;
+                        margin-top: 1rem;
+                        backdrop-filter: blur(5px);
+                    }
+                    
+                    .contact-info p {
+                        font-size: 1.1rem;
+                        margin: 0.5rem 0;
+                    }
+                    
+                    .contact-info strong {
+                        color: var(--secondary);
+                    }
+                </style>
+            </div>
+        </div>
+    </div>
+
+    <div class="music-controls">
+        <div class="youtube-input-container">
+            <input type="text" class="youtube-input" placeholder="Enter YouTube URL or video ID">
+            <button class="youtube-submit">Play</button>
+        </div>
+        <button class="music-toggle">🎵</button>
+    </div>
+
+    <div id="player-container" class="player-container">
+        <div id="youtube-player"></div>
+    </div>
+
+    <div class="stats-container">
+        <button class="close-player">✕</button>
+        <div class="song-info">
+            <div class="media-row">
+                <img class="song-thumbnail" src="" alt="Video thumbnail">
+                <div class="text-container">
+                    <div class="song-title">No song playing</div>
+                    <div class="song-artist">Unknown artist</div>
+                </div>
+                <button class="control-button play-pause-btn">
+                    <div class="play-icon"></div>
+                    <div class="pause-icon" style="display: none;"></div>
+                </button>
+            </div>
+            <div class="progress-bar">
+                <div class="progress-fill"></div>
+            </div>
+            <div class="time-info">
+                <span class="current-time">0:00</span>
+                <span class="duration">0:00</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Keep only YouTube player related code
+        let player = null;
+        let isPlayerReady = false;
+        let videoQueue = null;
+        let updateStatsInterval = null;
+        let isPlaying = false;
+
+        // Load YouTube API
+        function loadYouTubeAPI() {
+            return new Promise((resolve, reject) => {
+                if (window.YT && window.YT.Player) {
+                    resolve();
+                    return;
+                }
+
+                window.onYouTubeIframeAPIReady = function() {
+                    isPlayerReady = true;
+                    resolve();
+                };
+
+                const tag = document.createElement('script');
+                tag.src = 'https://www.youtube.com/iframe_api'; // Use regular YouTube domain
+                tag.async = true;
+                
+                tag.onload = () => console.log('YouTube API script loaded');
+                tag.onerror = () => reject(new Error('Failed to load YouTube API'));
+
+                const firstScriptTag = document.getElementsByTagName('script')[0];
+                firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+
+                // Add timeout
+                setTimeout(() => {
+                    if (!window.YT) {
+                        reject(new Error('YouTube API load timeout'));
+                    }
+                }, 10000);
+            });
+        }
+
+        // Initialize player
+        async function initializePlayer() {
+            return new Promise((resolve, reject) => {
+                // Ensure player container exists
+                let playerContainer = document.getElementById('youtube-player');
+                if (!playerContainer) {
+                    playerContainer = document.createElement('div');
+                    playerContainer.id = 'youtube-player';
+                    playerContainer.style.cssText = 'position: absolute; left: -9999px;'; // Hide off-screen
+                    document.body.appendChild(playerContainer);
+                }
+
+                try {
+                    player = new YT.Player('youtube-player', {
+                        height: '1',
+                        width: '1',
+                        videoId: '',
+                        playerVars: {
+                            'playsinline': 1,
+                            'controls': 0,
+                            'autoplay': 0,
+                            'enablejsapi': 1,
+                            'origin': window.location.origin,
+                            'rel': 0,
+                            'modestbranding': 1,
+                            'fs': 0,
+                            'showinfo': 0,
+                            'iv_load_policy': 3
+                        },
+                        events: {
+                            'onReady': (event) => {
+                                isPlayerReady = true;
+                                resolve(event);
+                            },
+                            'onStateChange': (event) => {
+                                // Handle state changes without postMessage
+                                if (typeof onPlayerStateChange === 'function') {
+                                    onPlayerStateChange(event);
+                                }
+                            },
+                            'onError': (event) => {
+                                console.warn('Player error:', event.data);
+                                if (event.data !== 2) {
+                                    reject(new Error(`Player error: ${event.data}`));
+                                } else {
+                                    resolve(event); // Don't reject on error code 2
+                                }
+                            }
+                        }
+                    });
+                } catch (error) {
+                    reject(error);
+                }
+            });
+        }
+
+        // Suppress YouTube console errors
+        const originalConsoleError = console.error;
+        console.error = (...args) => {
+            if (typeof args[0] === 'string' && 
+                (args[0].includes('youtubei/v1/log_event') || 
+                 args[0].includes('Error: Failed to execute'))) {
+                return; // Suppress specific YouTube errors
+            }
+            originalConsoleError.apply(console, args);
+        };
+
+        // Extract video ID function
+        function extractVideoId(url) {
+            if (!url) return null;
+            if (/^[a-zA-Z0-9_-]{11}$/.test(url)) return url;
+
+            const patterns = [
+                /(?:https?:\/\/)?(?:www\.)?youtube\.com\/watch\?v=([a-zA-Z0-9_-]{11})/,
+                /(?:https?:\/\/)?(?:www\.)?youtube\.com\/embed\/([a-zA-Z0-9_-]{11})/,
+                /(?:https?:\/\/)?(?:www\.)?youtube\.com\/v\/([a-zA-Z0-9_-]{11})/,
+                /(?:https?:\/\/)?(?:www\.)?youtu\.be\/([a-zA-Z0-9_-]{11})/
+            ];
+
+            for (const pattern of patterns) {
+                const match = url.match(pattern);
+                if (match) return match[1];
+            }
+            return null;
+        }
+
+        // Load video with improved error handling
+        async function loadVideo(videoId) {
+            if (!videoId) return;
+
+            try {
+                if (!isPlayerReady) {
+                    videoQueue = videoId;
+                    await initializePlayer();
+                    if (videoQueue) {
+                        await loadVideo(videoQueue);
+                        videoQueue = null;
+                    }
+                    return;
+                }
+
+                // Update UI elements
+                const elements = {
+                    thumbnail: document.querySelector('.song-thumbnail'),
+                    title: document.querySelector('.song-title'),
+                    artist: document.querySelector('.song-artist')
+                };
+
+                // Reset UI
+                if (elements.thumbnail) elements.thumbnail.src = '';
+                if (elements.title) elements.title.textContent = 'Loading...';
+                if (elements.artist) elements.artist.textContent = '';
+
+                // Set thumbnail
+                if (elements.thumbnail) {
+                    elements.thumbnail.src = `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
+                }
+
+                // Load video
+                await new Promise((resolve, reject) => {
+                    try {
+                        player.loadVideoById({
+                            videoId: videoId,
+                            events: {
+                                'onReady': resolve,
+                                'onError': reject
+                            }
+                        });
+                        setTimeout(resolve, 1000); // Fallback resolve
+                    } catch (error) {
+                        reject(error);
+                    }
+                });
+
+                startStatsUpdate();
+
+            } catch (error) {
+                console.warn('Error loading video:', error);
+                const titleElement = document.querySelector('.song-title');
+                const artistElement = document.querySelector('.song-artist');
+                if (titleElement) titleElement.textContent = 'Error loading video';
+                if (artistElement) artistElement.textContent = 'Please try again';
+            }
+        }
+
+        function formatTime(seconds) {
+            seconds = Math.floor(seconds);
+            const minutes = Math.floor(seconds / 60);
+            seconds = seconds % 60;
+            return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+        }
+
+        function startStatsUpdate() {
+            if (updateStatsInterval) {
+                clearInterval(updateStatsInterval);
+            }
+
+            updateStatsInterval = setInterval(() => {
+                if (player && player.getPlayerState) {
+                    const state = player.getPlayerState();
+                    if (state === 1) { // Playing
+                        const currentTime = player.getCurrentTime();
+                        const duration = player.getDuration();
+                        const videoData = player.getVideoData();
+                        
+                        // Update title and artist
+                        document.querySelector('.song-title').textContent = videoData.title;
+                        document.querySelector('.song-artist').textContent = videoData.author;
+                        
+                        // Update thumbnail if not already set
+                        const thumbnail = document.querySelector('.song-thumbnail');
+                        if (!thumbnail.src) {
+                            const videoId = videoData.video_id;
+                            thumbnail.src = `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`;
+                        }
+
+                        // Update progress bar
+                        const progress = (currentTime / duration) * 100;
+                        document.querySelector('.progress-fill').style.width = `${progress}%`;
+
+                        // Update time displays
+                        document.querySelector('.current-time').textContent = formatTime(currentTime);
+                        document.querySelector('.duration').textContent = formatTime(duration);
+                    }
+                }
+            }, 1000);
+        }
+
+        function togglePlayPause() {
+            const playIcon = document.querySelector('.play-icon');
+            const pauseIcon = document.querySelector('.pause-icon');
+            
+            if (isPlaying) {
+                playIcon.classList.remove('hidden');
+                pauseIcon.classList.add('hidden');
+                player.pauseVideo();
+            } else {
+                playIcon.classList.add('hidden');
+                pauseIcon.classList.remove('hidden');
+                player.playVideo();
+            }
+        }
+
+        function onPlayerStateChange(event) {
+            const playIcon = document.querySelector('.play-icon');
+            const pauseIcon = document.querySelector('.pause-icon');
+            const statsContainer = document.querySelector('.stats-container');
+            
+            switch(event.data) {
+                case YT.PlayerState.PLAYING:
+                    isPlaying = true;
+                    playIcon.classList.add('hidden');
+                    pauseIcon.classList.remove('hidden');
+                    statsContainer.classList.add('visible');
+                    break;
+                case YT.PlayerState.PAUSED:
+                    isPlaying = false;
+                    playIcon.classList.remove('hidden');
+                    pauseIcon.classList.add('hidden');
+                    break;
+                case YT.PlayerState.ENDED:
+                    isPlaying = false;
+                    playIcon.classList.remove('hidden');
+                    pauseIcon.classList.add('hidden');
+                    // Add a slight delay before hiding the stats container
+                    setTimeout(() => {
+                        statsContainer.classList.remove('visible');
+                    }, 300);
+                    break;
+            }
+        }
+
+        // Smooth closing animation
+        document.querySelector('.close-player').addEventListener('click', function() {
+            const statsContainer = document.querySelector('.stats-container');
+            statsContainer.classList.remove('visible');
+            
+            // Wait for animation to complete before stopping video
+            setTimeout(() => {
+                if (player && typeof player.stopVideo === 'function') {
+                    player.stopVideo();
+                }
+                document.querySelector('.song-thumbnail').src = '';
+                document.querySelector('.song-title').textContent = 'No song playing';
+                document.querySelector('.song-artist').textContent = 'Unknown artist';
+                if (updateStatsInterval) {
+                    clearInterval(updateStatsInterval);
+                }
+            }, 300);
+        });
+
+        // Main initialization with retry mechanism
+        document.addEventListener('DOMContentLoaded', async function() {
+            const maxRetries = 3;
+            let retryCount = 0;
+
+            async function initWithRetry() {
+                try {
+                    await loadYouTubeAPI();
+                    await new Promise(resolve => setTimeout(resolve, 500)); // Small delay after API loads
+                    await initializePlayer();
+                    
+                    // Initialize UI elements
+                    const elements = {
+                        musicToggle: document.querySelector('.music-toggle'),
+                        submitButton: document.querySelector('.youtube-submit'),
+                        input: document.querySelector('.youtube-input'),
+                        youtubeInputContainer: document.querySelector('.youtube-input-container'),
+                        statsContainer: document.querySelector('.stats-container')
+                    };
+
+                    // Set up event listeners
+                    if (elements.submitButton && elements.input) {
+                        elements.submitButton.addEventListener('click', async () => {
+                            const videoId = extractVideoId(elements.input.value.trim());
+                            if (videoId) {
+                                await loadVideo(videoId);
+                                elements.input.value = '';
+                                elements.youtubeInputContainer.classList.remove('visible');
+                                elements.musicToggle.classList.remove('hidden');
+                                elements.statsContainer.classList.add('visible');
+                            } else {
+                                alert('Please enter a valid YouTube URL or video ID');
+                            }
+                        });
+
+                        elements.input.addEventListener('keypress', async (e) => {
+                            if (e.key === 'Enter') {
+                                const videoId = extractVideoId(e.target.value.trim());
+                                if (videoId) {
+                                    await loadVideo(videoId);
+                                    e.target.value = '';
+                                    elements.youtubeInputContainer.classList.remove('visible');
+                                    elements.musicToggle.classList.remove('hidden');
+                                    elements.statsContainer.classList.add('visible');
+                                } else {
+                                    alert('Please enter a valid YouTube URL or video ID');
+                                }
+                            }
+                        });
+                    }
+
+                } catch (error) {
+                    console.warn(`Initialization attempt ${retryCount + 1} failed:`, error);
+                    retryCount++;
+                    
+                    if (retryCount < maxRetries) {
+                        console.log(`Retrying initialization... Attempt ${retryCount + 1} of ${maxRetries}`);
+                        await new Promise(resolve => setTimeout(resolve, 1000 * retryCount)); // Exponential backoff
+                        return initWithRetry();
+                    } else {
+                        console.error('Failed to initialize after', maxRetries, 'attempts');
+                        // Optionally show a user-friendly error message
+                        const errorMessage = document.createElement('div');
+                        errorMessage.textContent = 'Unable to load music player. Please refresh the page.';
+                        errorMessage.style.color = 'red';
+                        document.body.appendChild(errorMessage);
+                    }
+                }
+            }
+
+            initWithRetry();
+        });
+    </script>
+    <script>
+        // Mouse trail effect
+        const canvas = document.getElementById('mouseTrail');
+        const ctx = canvas.getContext('2d');
+        
+        // Set canvas size
+        function setCanvasSize() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        setCanvasSize();
+        window.addEventListener('resize', setCanvasSize);
+
+        const particles = [];
+        const mousePosition = { x: 0, y: 0 };
+        
+        class Particle {
+            constructor(x, y, isClick = false, isScroll = false) {
+                this.x = x;
+                this.y = y;
+                this.size = isClick ? 8 : (isScroll ? 5 : 3);
+                this.baseX = this.x;
+                this.baseY = this.y;
+                this.density = (Math.random() * 30) + 1;
+                this.opacity = 1;
+                this.isClick = isClick;
+                this.isScroll = isScroll;
+                this.angle = Math.random() * Math.PI * 2;
+                this.velocity = isClick ? 8 : (isScroll ? 4 : 1);
+                
+                if (isClick) {
+                    this.moveX = Math.cos(this.angle) * this.velocity;
+                    this.moveY = Math.sin(this.angle) * this.velocity;
+                } else if (isScroll) {
+                    this.moveX = (Math.random() - 0.5) * this.velocity;
+                    this.moveY = Math.random() * this.velocity;
+                }
+            }
+        
+            draw() {
+                if (this.isClick) {
+                    ctx.fillStyle = `rgba(147, 112, 219, ${this.opacity})`; // Light purple for clicks
+                } else if (this.isScroll) {
+                    ctx.fillStyle = `rgba(186, 85, 211, ${this.opacity})`; // Medium purple for scrolls
+                } else {
+                    ctx.fillStyle = `rgba(138, 43, 226, ${this.opacity})`; // Dark purple for mouse movement
+                }
+                
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.closePath();
+                ctx.fill();
+            }
+        
+            update() {
+                if (this.isClick) {
+                    // Click particles expand outward
+                    this.x += this.moveX;
+                    this.y += this.moveY;
+                    this.size *= 0.95;
+                    this.opacity -= 0.03;
+                } else if (this.isScroll) {
+                    // Scroll particles fall down
+                    this.x += this.moveX;
+                    this.y += this.moveY;
+                    this.moveY += 0.2; // Gravity effect
+                    this.opacity -= 0.02;
+                } else {
+                    // Normal mouse trail behavior - simplified and more direct
+                    let dx = mousePosition.x - this.x;
+                    let dy = mousePosition.y - this.y;
+                    
+                    // Move particles directly towards mouse position
+                    this.x += dx * 0.05;
+                    this.y += dy * 0.05;
+                    
+                    // Fade out based on distance from mouse
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+                    this.opacity = Math.max(0, 1 - distance / 100);
+                    
+                    // Gradually reduce size
+                    this.size = Math.max(0.5, this.size * 0.995);
+                }
+            }
+        }
+
+        function init() {
+            particles.length = 0;
+        }
+
+        function animate() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Remove particles with zero opacity
+            for (let i = particles.length - 1; i >= 0; i--) {
+                particles[i].update();
+                particles[i].draw();
+                if (particles[i].opacity <= 0) {
+                    particles.splice(i, 1);
+                }
+            }
+            requestAnimationFrame(animate);
+        }
+
+        init();
+        animate();
+
+        // Mouse move effect
+        window.addEventListener('mousemove', function(event) {
+            mousePosition.x = event.x;
+            mousePosition.y = event.y;
+            
+            // Create fewer particles but more frequently
+            particles.push(new Particle(mousePosition.x, mousePosition.y));
+        });
+
+        // Click effect
+        window.addEventListener('click', function(event) {
+            for (let i = 0; i < 15; i++) {
+                particles.push(new Particle(event.x, event.y, true));
+            }
+        });
+
+        // Scroll effect
+        let lastScrollY = window.scrollY;
+        let scrollTimeout;
+        window.addEventListener('scroll', function() {
+            clearTimeout(scrollTimeout);
+            
+            const scrollDiff = window.scrollY - lastScrollY;
+            const scrollRight = window.innerWidth - 20; // 20px from right edge
+            
+            if (Math.abs(scrollDiff) > 5) { // Only trigger for significant scroll
+                for (let i = 0; i < 3; i++) {
+                    particles.push(new Particle(
+                        scrollRight + (Math.random() - 0.5) * 20,
+                        window.scrollY + window.innerHeight / 2 + (Math.random() - 0.5) * 100,
+                        false,
+                        true
+                    ));
+                }
+            }
+            
+            lastScrollY = window.scrollY;
+            
+            // Continue creating particles for a short while after scrolling stops
+            scrollTimeout = setTimeout(() => {
+                lastScrollY = window.scrollY;
+            }, 50);
+        });
+
+        // Optional: Add touch support for mobile devices
+        window.addEventListener('touchmove', function(event) {
+            event.preventDefault();
+            mousePosition.x = event.touches[0].clientX;
+            mousePosition.y = event.touches[0].clientY;
+            
+            particles.push(new Particle(mousePosition.x, mousePosition.y));
+        }, { passive: false });
+    </script>
+    <script>
+        // Add new content switching functionality
+        document.addEventListener('DOMContentLoaded', function() {
+            const mainContent = document.getElementById('main-content');
+            const contentSections = document.getElementById('content-sections');
+            const panelButtons = document.querySelectorAll('[data-content="about"], [data-content="contact"]');
+            const backButtons = document.querySelectorAll('.back-button');
+
+            function showContent(contentId) {
+                contentSections.classList.add('active');
+                mainContent.style.display = 'none';
+                
+                document.querySelectorAll('.content-section').forEach(section => {
+                    section.classList.remove('active');
+                });
+                
+                const selectedContent = document.getElementById(`${contentId}-content`);
+                if (selectedContent) {
+                    selectedContent.classList.add('active');
+                }
+            }
+
+            function showMainContent() {
+                contentSections.classList.remove('active');
+                mainContent.style.display = 'block';
+                
+                document.querySelectorAll('.content-section').forEach(section => {
+                    section.classList.remove('active');
+                });
+            }
+
+            panelButtons.forEach(button => {
+                button.addEventListener('click', () => {
+                    const contentId = button.getAttribute('data-content');
+                    showContent(contentId);
+                });
+            });
+
+            backButtons.forEach(button => {
+                button.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    showMainContent();
+                });
+            });
+        });
+    </script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Add a button to the music controls to toggle the audio panel
+            const musicControls = document.querySelector('.music-controls');
+            const audioControlsButton = document.createElement('button');
+            audioControlsButton.className = 'audio-controls-toggle';
+            audioControlsButton.innerHTML = '⚙️';
+            musicControls.appendChild(audioControlsButton);
+
+            const audioPanel = document.querySelector('.audio-controls-panel');
+            
+            audioControlsButton.addEventListener('click', () => {
+                audioPanel.classList.toggle('visible');
+            });
+
+            // Add event listeners for all sliders
+            document.querySelectorAll('.audio-slider').forEach(slider => {
+                slider.addEventListener('input', function() {
+                    // Update the value display
+                    const valueDisplay = this.parentElement.querySelector('.slider-value');
+                    let value = this.value;
+                    
+                    // Add appropriate suffix based on slider type
+                    if (this.id === 'pitch-slider') {
+                        valueDisplay.textContent = value;
+                    } else {
+                        valueDisplay.textContent = value + '%';
+                    }
+
+                    // Here you can add the actual audio processing logic
+                    switch(this.id) {
+                        case 'volume-slider':
+                            if (player) player.setVolume(parseInt(value));
+                            break;
+                        case 'speed-slider':
+                            if (player) player.setPlaybackRate(parseFloat(value) / 100);
+                            break;
+                        // Add other cases as needed
+                    }
+                });
+            });
+        });
+    </script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const effectsButton = document.querySelector('.effects-button');
+            const audioPanel = document.querySelector('.audio-controls-panel');
+            const statsContainer = document.querySelector('.stats-container');
+
+            // Show/hide effects button along with stats
+            const observer = new MutationObserver((mutations) => {
+                mutations.forEach((mutation) => {
+                    if (mutation.target.classList.contains('visible')) {
+                        effectsButton.classList.add('visible');
+                    } else {
+                        effectsButton.classList.remove('visible');
+                        audioPanel.classList.remove('visible'); // Hide audio panel when stats are hidden
+                    }
+                });
+            });
+
+            observer.observe(statsContainer, {
+                attributes: true,
+                attributeFilter: ['class']
+            });
+
+            // Toggle audio panel when effects button is clicked
+            effectsButton.addEventListener('click', () => {
+                audioPanel.classList.toggle('visible');
+            });
+
+            // Remove the previous gear icon button if it exists
+            const oldAudioControlsButton = document.querySelector('.audio-controls-toggle');
+            if (oldAudioControlsButton) {
+                oldAudioControlsButton.remove();
+            }
+        });
+    </script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // First, check if elements exist
+            const effectsButton = document.querySelector('.effects-button');
+            const audioPanel = document.querySelector('.audio-controls-panel');
+            const statsContainer = document.querySelector('.stats-container');
+            const musicToggle = document.querySelector('.music-toggle');
+            const youtubeInputContainer = document.querySelector('.youtube-input-container');
+
+            // Music toggle button
+            if (musicToggle && youtubeInputContainer) {
+                musicToggle.addEventListener('click', () => {
+                    youtubeInputContainer.classList.toggle('visible');
+                    musicToggle.classList.toggle('hidden');
+                });
+            }
+
+            // Effects button and audio panel
+            if (effectsButton && audioPanel) {
+                effectsButton.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    audioPanel.classList.toggle('visible');
+                    console.log('Effects button clicked, panel visibility:', audioPanel.classList.contains('visible'));
+                });
+            }
+
+            // Close panel when clicking outside
+            if (audioPanel) {
+                document.addEventListener('click', function(e) {
+                    if (!audioPanel.contains(e.target) && !e.target.classList.contains('effects-button')) {
+                        audioPanel.classList.remove('visible');
+                    }
+                });
+            }
+
+            // Observer for stats container
+            if (effectsButton && statsContainer) {
+                const observer = new MutationObserver((mutations) => {
+                    mutations.forEach((mutation) => {
+                        if (mutation.target.classList.contains('visible')) {
+                            effectsButton.classList.add('visible');
+                        } else {
+                            effectsButton.classList.remove('visible');
+                            if (audioPanel) {
+                                audioPanel.classList.remove('visible');
+                            }
+                        }
+                    });
+                });
+
+                observer.observe(statsContainer, {
+                    attributes: true,
+                    attributeFilter: ['class']
+                });
+            }
+
+            // Add event listeners for all sliders
+            const sliders = document.querySelectorAll('.audio-slider');
+            if (sliders.length > 0) {
+                sliders.forEach(slider => {
+                    slider.addEventListener('input', function() {
+                        const valueDisplay = this.parentElement.querySelector('.slider-value');
+                        if (valueDisplay) {
+                            let value = this.value;
+                            valueDisplay.textContent = this.id === 'pitch-slider' ? value : value + '%';
+                        }
+
+                        switch(this.id) {
+                            case 'volume-slider':
+                                if (typeof player !== 'undefined' && player) player.setVolume(parseInt(value));
+                                break;
+                            case 'speed-slider':
+                                if (typeof player !== 'undefined' && player) player.setPlaybackRate(parseFloat(value) / 100);
+                                break;
+                        }
+                    });
+                });
+            }
+
+            // Remove any existing audio controls toggle buttons
+            const audioControlsButtons = document.querySelectorAll('.audio-controls-toggle');
+            audioControlsButtons.forEach(button => button.remove());
+
+            // Prevent future audio controls toggle buttons
+            const buttonObserver = new MutationObserver((mutations) => {
+                mutations.forEach((mutation) => {
+                    mutation.addedNodes.forEach((node) => {
+                        if (node.classList && node.classList.contains('audio-controls-toggle')) {
+                            node.remove();
+                        }
+                    });
+                });
+            });
+
+            buttonObserver.observe(document.body, {
+                childList: true,
+                subtree: true
+            });
+        });
+    </script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const audioControlsToggle = document.querySelector('.audio-controls-toggle');
+            const audioControls = document.querySelector('.audio-controls');
+            
+            // Toggle audio controls
+            audioControlsToggle.addEventListener('click', () => {
+                audioControls.classList.toggle('visible');
+            });
+
+            // Handle slider changes
+            const sliders = document.querySelectorAll('.audio-slider');
+            sliders.forEach(slider => {
+                const valueDisplay = slider.nextElementSibling;
+                
+                slider.addEventListener('input', () => {
+                    let value = parseFloat(slider.value);
+                    valueDisplay.textContent = value.toFixed(1);
+                    
+                    switch(slider.id) {
+                        case 'pitch':
+                            createPitchNode(value);
+                            break;
+                            
+                        case 'bass':
+                            if (bassNode) {
+                                bassNode.gain.value = value;
+                            }
+                            break;
+                            
+                        case 'distortion':
+                            if (distortionNode) {
+                                const normalizedValue = value / 100;
+                                distortionNode.curve = makeDistortionCurve(normalizedValue * 400);
+                                distortionNode.oversample = '4x';
+                            }
+                            break;
+                            
+                        case 'reverb':
+                            if (reverbNode) {
+                                const normalizedValue = value / 100;
+                                reverbNode.connect(gainNode);
+                                gainNode.gain.value = normalizedValue;
+                            }
+                            break;
+                    }
+                });
+            });
+        });
+    </script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Remove any existing audio controls toggle buttons
+            const audioControlsButtons = document.querySelectorAll('.audio-controls-toggle');
+            audioControlsButtons.forEach(button => button.remove());
+
+            // Also prevent any future attempts to create this button
+            const observer = new MutationObserver((mutations) => {
+                mutations.forEach((mutation) => {
+                    mutation.addedNodes.forEach((node) => {
+                        if (node.classList && node.classList.contains('audio-controls-toggle')) {
+                            node.remove();
+                        }
+                    });
+                });
+            });
+
+            observer.observe(document.body, {
+                childList: true,
+                subtree: true
+            });
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Your Website</title>
+    <style>
+        body {
+            background: #1a1a1a;
+            color: white;
+            font-family: Arial, sans-serif;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .nav-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+        }
+
+        .nav-button {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 20px;
+            border-radius: 10px;
+            cursor: pointer;
+            text-align: center;
+            border: none;
+            color: white;
+            transition: transform 0.3s ease;
+        }
+
+        .nav-button:hover {
+            transform: translateY(-5px);
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .social-button {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 15px 30px;
+            border-radius: 8px;
+            border: none;
+            color: white;
+            cursor: pointer;
+            margin: 10px;
+            font-size: 16px;
+            transition: background 0.3s ease;
+        }
+
+        .social-button:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .twitch-button {
+            background: #6441a5;
+        }
+
+        .youtube-button {
+            background: #ff0000;
+        }
+
+        .kofi-button {
+            background: #29abe0;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: #2a2a72;
+            padding: 20px;
+            border-radius: 10px;
+            max-width: 500px;
+            width: 90%;
+            position: relative;
+            color: white;
+        }
+
+        .close-modal {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: none;
+            border: none;
+            color: white;
+            font-size: 24px;
+            cursor: pointer;
+        }
+
+        .social-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            align-items: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Welcome to My Website</h1>
+        </header>
+
+        <div class="nav-grid">
+            <div class="nav-button" data-section="about">
+                <h2>About</h2>
+                <p>Learn more about who I am</p>
+            </div>
+
+            <div class="nav-button" data-section="watch">
+                <h2>Watch Me</h2>
+                <p>View my live streams and videos</p>
+            </div>
+
+            <div class="nav-button" data-section="donate">
+                <h2>Donate</h2>
+                <p>Support my content creation</p>
+            </div>
+
+            <div class="nav-button" data-section="contact">
+                <h2>Contact</h2>
+                <p>Get in touch with me</p>
+            </div>
+        </div>
+    </div>
+
+    <div id="contentModal" class="modal">
+        <div class="modal-content">
+            <button class="close-modal">×</button>
+            <div class="modal-body"></div>
+        </div>
+    </div>
+
+    <script>
+        const modal = document.getElementById('contentModal');
+        const modalBody = modal.querySelector('.modal-body');
+        const buttons = document.querySelectorAll('.nav-button');
+        const closeBtn = modal.querySelector('.close-modal');
+
+        function openSocialLink(url) {
+            window.open(url, '_blank');
+        }
+
+        const content = {
+            about: `
+                <h2>About Me</h2>
+                <p>I am a small streamer from Canada, and I code as well. I am currently working on a VR game called Shmackem Whackem.</p>
+            `,
+            watch: `
+                <h2>Watch My Content</h2>
+                <div class="social-buttons">
+                    <button class="social-button twitch-button" onclick="openSocialLink('https://www.twitch.tv/westerneagle42')">Watch on Twitch</button>
+                    <button class="social-button youtube-button" onclick="openSocialLink('https://www.youtube.com/@Westr42')">Subscribe on YouTube</button>
+                </div>
+            `,
+            donate: `
+                <h2>Support My Work</h2>
+                <div class="social-buttons">
+                    <button class="social-button kofi-button" onclick="openSocialLink('https://ko-fi.com/Y8Y41C0PS1')">Support on Ko-fi</button>
+                </div>
+            `,
+            contact: `
+                <h2>Contact Me</h2>
+                <p>Contact information coming soon...</p>
+            `
+        };
+
+        buttons.forEach(button => {
+            button.addEventListener('click', () => {
+                const section = button.dataset.section;
+                modalBody.innerHTML = content[section];
+                modal.classList.add('active');
+            });
+        });
+
+        closeBtn.addEventListener('click', () => {
+            modal.classList.remove('active');
+        });
+
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                modal.classList.remove('active');
+            }
+        });
+    </script>
+</body>
+</html>
